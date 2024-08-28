@@ -1,0 +1,311 @@
+﻿@page "/counter"
+@rendermode InteractiveServer
+
+@using System.Collections.Generic
+@using System.Linq
+
+<PageTitle>Student Management Application</PageTitle>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <h3 class="text-center">Student Management Application</h3>
+
+            @if (!string.IsNullOrEmpty(FeedbackMessage))
+            {
+                <div class="alert alert-success text-center" role="alert">
+                    @FeedbackMessage
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Students</h4>
+                    <ul class="list-group">
+                        @foreach (var student in ApplicationService.GetAllStudents())
+                        {
+                            <li class="list-group-item list-group-item-action @(SelectedStudent?.Id == student.Id ? "active" : "")"
+                                @onclick="@(() => SelectStudent(student))">
+                                @student.Name
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <div class="col-md-6">
+                    <h4>Sections</h4>
+                    <ul class="list-group">
+                        @foreach (var sec in ApplicationService.GetAllSections())
+                        {
+                            <li class="list-group-item list-group-item-action @(SelectedSection?.Id == sec.Id ? "active" : "")"
+                                @onclick="@(() => SelectSection(sec))">
+                                @sec.Name
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+
+            @if (SelectedSection != null)
+            {
+                <div class="mt-4">
+                    <h4>Students in Section: @SelectedSection.Name</h4>
+                    <ul class="list-group">
+                        @foreach (var student in ApplicationService.GetStudentsBySection(SelectedSection.Id))
+                        {
+                            <li class="list-group-item">@student.Name</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="mt-5">
+                <h4>Add / Update Student</h4>
+                <div class="input-group mb-3">
+                    <input @bind="StudentName" placeholder="Student Name" class="form-control" />
+                </div>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-success" @onclick="AddStudent">Add Student</button>
+                    <button class="btn btn-danger" @onclick="RemoveStudent">Remove Student</button>
+                    <button class="btn btn-warning" @onclick="UpdateStudent">Update Student</button>
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <h4>Add / Update Section</h4>
+                <div class="input-group mb-3">
+                    <input @bind="SectionName" placeholder="Section Name" class="form-control" />
+                </div>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-success" @onclick="AddSection">Add Section</button>
+                    <button class="btn btn-danger" @onclick="RemoveSection">Remove Section</button>
+                    <button class="btn btn-warning" @onclick="UpdateSection">Update Section</button>
+                </div>
+            </div>
+
+            <div class="mt-5 text-center">
+                <button class="btn btn-info btn-lg" @onclick="AssignStudentToSection">Assign Student to Section</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string StudentName;
+    private string SectionName;
+    private Student SelectedStudent;
+    private Section SelectedSection;
+    private string FeedbackMessage;
+
+    private void SelectStudent(Student student)
+    {
+        SelectedStudent = student;
+        StudentName = student.Name;
+        FeedbackMessage = string.Empty;
+    }
+
+    private void SelectSection(Section sec)
+    {
+        SelectedSection = sec;
+        SectionName = sec.Name;
+        FeedbackMessage = string.Empty;
+    }
+
+    private async Task AddStudent()
+    {
+        if (string.IsNullOrWhiteSpace(StudentName))
+        {
+            FeedbackMessage = "Student name cannot be empty!";
+        }
+        else if (ApplicationService.GetAllStudents().Any(s => s.Name.Equals(StudentName, StringComparison.OrdinalIgnoreCase)))
+        {
+            FeedbackMessage = "A student with the same name already exists!";
+        }
+        else
+        {
+            ApplicationService.AddStudent(StudentName);
+            StudentName = string.Empty;
+            FeedbackMessage = "Student added successfully!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task RemoveStudent()
+    {
+        if (SelectedStudent != null)
+        {
+            ApplicationService.RemoveStudent(SelectedStudent);
+            SelectedStudent = null;
+            StudentName = string.Empty;
+            FeedbackMessage = "Student removed successfully!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task UpdateStudent()
+    {
+        if (SelectedStudent != null && !string.IsNullOrWhiteSpace(StudentName))
+        {
+            ApplicationService.UpdateStudent(SelectedStudent.Id, StudentName);
+            FeedbackMessage = "Student updated successfully!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task AddSection()
+    {
+        if (string.IsNullOrWhiteSpace(SectionName))
+        {
+            FeedbackMessage = "Section name cannot be empty!";
+        }
+        else if (ApplicationService.GetAllSections().Any(s => s.Name.Equals(SectionName, StringComparison.OrdinalIgnoreCase)))
+        {
+            FeedbackMessage = "A section with the same name already exists!";
+        }
+        else
+        {
+            ApplicationService.AddSection(SectionName);
+            SectionName = string.Empty;
+            FeedbackMessage = "Section added successfully!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task RemoveSection()
+    {
+        if (SelectedSection != null)
+        {
+            ApplicationService.RemoveSection(SelectedSection);
+            SelectedSection = null;
+            SectionName = string.Empty;
+            FeedbackMessage = "Section removed successfully!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task UpdateSection()
+    {
+        if (SelectedSection != null && !string.IsNullOrWhiteSpace(SectionName))
+        {
+            ApplicationService.UpdateSection(SelectedSection.Id, SectionName);
+            FeedbackMessage = "Section updated successfully!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task AssignStudentToSection()
+    {
+        if (SelectedStudent != null && SelectedSection != null)
+        {
+            ApplicationService.AssignStudentToSection(SelectedStudent.Id, SelectedSection.Id);
+            FeedbackMessage = $"Student assigned to section {SelectedSection.Name}!";
+        }
+
+        await UpdateUIAsync();
+    }
+
+    private async Task UpdateUIAsync()
+    {
+        StateHasChanged();
+        await Task.Delay(3000);
+        FeedbackMessage = string.Empty;
+        StateHasChanged();
+    }
+}
+
+@code {
+    public class Student
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public List<int> SectionIds { get; set; } = new List<int>();
+    }
+
+    public class Section
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public HashSet<int> StudentIds { get; set; } = new HashSet<int>();
+    }
+
+    public static class ApplicationService
+    {
+        private static List<Student> Students = new();
+        private static List<Section> Sections = new();
+
+        public static IEnumerable<Student> GetAllStudents() => Students;
+        public static IEnumerable<Section> GetAllSections() => Sections;
+
+        public static void AddStudent(string name)
+        {
+            var maxId = Students.Any() ? Students.Max(s => s.Id) : 0;
+            Students.Add(new Student { Id = maxId + 1, Name = name });
+        }
+
+        public static void RemoveStudent(Student student)
+        {
+            if (!student.SectionIds.Any())
+            {
+                Students.Remove(student);
+            }
+        }
+
+        public static void UpdateStudent(int studentId, string newName)
+        {
+            var student = Students.FirstOrDefault(s => s.Id == studentId);
+            if (student != null)
+            {
+                student.Name = newName;
+            }
+        }
+
+        public static void AddSection(string name)
+        {
+            var maxId = Sections.Any() ? Sections.Max(s => s.Id) : 0;
+            Sections.Add(new Section { Id = maxId + 1, Name = name });
+        }
+
+        public static void RemoveSection(Section section)
+        {
+            if (!section.StudentIds.Any())
+            {
+                Sections.Remove(section);
+            }
+        }
+
+        public static void UpdateSection(int sectionId, string newName)
+        {
+            var section = Sections.FirstOrDefault(s => s.Id == sectionId);
+            if (section != null)
+            {
+                section.Name = newName;
+            }
+        }
+
+        public static void AssignStudentToSection(int studentId, int sectionId)
+        {
+            var student = Students.FirstOrDefault(s => s.Id == studentId);
+            var section = Sections.FirstOrDefault(s => s.Id == sectionId);
+
+            if (student != null && section != null)
+            {
+                if (!student.SectionIds.Contains(sectionId))
+                {
+                    student.SectionIds.Add(sectionId);
+                    section.StudentIds.Add(studentId);
+                }
+            }
+        }
+
+        public static IEnumerable<Student> GetStudentsBySection(int sectionId)
+        {
+            return Students.Where(s => s.SectionIds.Contains(sectionId));
+        }
+    }
+}
